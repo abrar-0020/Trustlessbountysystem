@@ -1,0 +1,166 @@
+#pragma version 6
+
+// --- Initialization: runs only on app create ---
+txn ApplicationID
+int 0
+==
+bnz handle_create
+
+// --- Routing: check OnCompletion type ---
+txn OnCompletion
+int NoOp
+==
+bnz handle_noop
+
+// --- Allow creator to DELETE the app (closes escrow back to creator) ---
+txn OnCompletion
+int DeleteApplication
+==
+bnz handle_delete
+
+// --- Allow creator to UPDATE the app ---
+txn OnCompletion
+int UpdateApplication
+==
+bnz handle_creator_check
+
+// Block OptIn and CloseOut
+int 0
+return
+
+// --- Creator-only check (update) ---
+handle_creator_check:
+txn Sender
+byte "creator"
+app_global_get
+==
+return
+
+// --- Delete: close escrow balance back to creator, then allow ---
+handle_delete:
+txn Sender
+byte "creator"
+app_global_get
+==
+assert
+// Inner transaction: send all escrow funds back to creator
+itxn_begin
+int pay
+itxn_field TypeEnum
+txn Sender
+itxn_field Receiver
+txn Sender
+itxn_field CloseRemainderTo
+int 0
+itxn_field Amount
+int 0
+itxn_field Fee
+itxn_submit
+int 1
+return
+
+// --- NoOp: Route by first argument ---
+handle_noop:
+txna ApplicationArgs 0
+byte "submit_proof"
+==
+bnz handle_submit
+
+txna ApplicationArgs 0
+byte "validate_and_release"
+==
+bnz handle_validate
+
+txna ApplicationArgs 0
+byte "raise_dispute"
+==
+bnz handle_dispute
+
+err
+
+// --- submit_proof ---
+// Store submission hash, mark status = 1 (in_progress)
+// Only requires current status is 0 (open)
+handle_submit:
+byte "status"
+app_global_get
+int 0
+==
+assert
+byte "submission"
+txna ApplicationArgs 1
+app_global_put
+byte "status"
+int 1
+app_global_put
+int 1
+return
+
+// --- validate_and_release ---
+// Only creator can call. Blocks re-validation if already completed.
+// Releases reward ALGO to Accounts[1] (the worker address).
+handle_validate:
+byte "status"
+app_global_get
+int 2
+!=
+assert
+txn Sender
+byte "creator"
+app_global_get
+==
+assert
+itxn_begin
+int pay
+itxn_field TypeEnum
+txna Accounts 1
+itxn_field Receiver
+byte "reward"
+app_global_get
+itxn_field Amount
+int 0
+itxn_field Fee
+itxn_submit
+byte "status"
+int 2
+app_global_put
+int 1
+return
+
+// --- raise_dispute ---
+// Mark status = 3 (disputed), only if not already completed
+handle_dispute:
+byte "status"
+app_global_get
+int 2
+!=
+assert
+txn Sender
+byte "creator"
+app_global_get
+==
+assert
+byte "status"
+int 3
+app_global_put
+int 1
+return
+
+// --- handle_create: initialize global state ---
+handle_create:
+byte "creator"
+txn Sender
+app_global_put
+byte "reward"
+txna ApplicationArgs 0
+btoi
+app_global_put
+byte "deadline"
+txna ApplicationArgs 1
+btoi
+app_global_put
+byte "status"
+int 0
+app_global_put
+int 1
+return

@@ -1,0 +1,75 @@
+# 🛠️ DEOXYS: Trustless Bounty Escrow System - Manual
+
+DEOXYS is a hybrid Web3 application built on Algorand. It allows creators to lock funds in a smart contract escrow that only releases when proof of work is submitted and validated.
+
+---
+
+## 1. Prerequisites & Setup
+
+### Backend (FastAPI + Algorand SDK)
+1. Go to the `backend` directory.
+2. Activate your virtual environment: `.\venv\Scripts\activate`.
+3. Start the server: `uvicorn api:app --reload`.
+4. **IMPORTANT**: On the first start, the console will print a "BACKEND WALLET ADDRESS".
+5. Use the [Algorand TestNet Dispenser](https://bank.testnet.algorand.network/) to fund this address with TestNet ALGO.
+
+### Frontend (React + Vite)
+1. Go to the `Web3 Bounty Escrow UI` directory.
+2. Run `npm install` (if not already done).
+3. Start the UI: `npm run dev`.
+4. Open your browser to the provided local URL (usually http://localhost:5173).
+
+---
+
+## 2. Platform Architecture
+
+-   **Backend Proxy**: The Python server acts as a secure relayer. It manages the "Demo Wallet" which signs transactions so you don't need a browser extension for this demo.
+-   **Smart Contracts**: Every bounty is a unique Algorand Smart Contract (`Application`).
+-   **Escrow**: When a bounty is created, the reward ALGO is locked inside the Application's address.
+-   **Persistence**: Bounties are saved in `backend/bounties.json`. They will persist even if you restart the server.
+
+---
+
+## 3. How to Use the App
+
+### Step A: Creating a Bounty (Creator Role)
+1. Navigate to "Create Bounty".
+2. Fill in the Title, Reward (ALGO), and Requirements.
+3. Click "Lock Funds & Create Bounty".
+4. **Reaction**: 
+   - A new Smart Contract is deployed.
+   - 0.5 ALGO is sent to the Platform Treasury.
+   - The Reward + 0.1 ALGO (Buffer) is locked in the Escrow.
+
+### Step B: Submitting Work (Worker Role)
+1. Navigate to "Browse Bounties" and select your bounty.
+2. In the "Submit Work" section, enter an IPFS Hash or a URL as proof.
+3. Click "Submit Proof via Smart Contract".
+4. **Reaction**: The Smart Contract state is updated on-chain to `in_progress`.
+
+### Step C: Validating & Payout (Creator Role)
+1. Once work is submitted, a new "Validate Proof & Release Escrow" button appears.
+2. Click it to confirm the work is correct.
+3. **Reaction**: The Smart Contract executes the `validate_and_release` logic, instantly sending the locked ALGO to the worker on-chain.
+
+### Step D: Disputes
+1. If the work is incorrect or never submitted, the Creator can click "Dispute".
+2. **Reaction**: This triggers the on-chain dispute flag, preventing immediate payout and allowing for vote-based resolution.
+
+---
+
+## 4. Key Files
+- `backend/api.py`: The heart of the system (FastAPI logic).
+- `backend/bounty_approval.teal`: The Algorand Smart Contract logic (PyTeal).
+- `backend/demo_wallet.txt`: Your private keys (DO NOT share in production).
+- `backend/treasury_wallet.txt`: Where platform fees (0.5 ALGO/bounty) are stored.
+
+---
+
+## 5. Troubleshooting
+- **"Funds Needed" Error**: Make sure your Backend Wallet (printed in console) has at least 1-2 ALGO from the dispenser.
+- **Bounties Disappeared**: If you delete `bounties.json`, the UI will be empty.
+- **Teal Files Missing**: Ensure `bounty_approval.teal` and `bounty_clear_state.teal` are in the `backend` folder.
+
+---
+Built with pride for the Algorand Blockchain Ecosystem.

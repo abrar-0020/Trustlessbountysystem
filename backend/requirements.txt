@@ -1,0 +1,4 @@
+pyteal==0.26.1
+fastapi
+uvicorn
+pydantic

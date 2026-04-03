@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1,
+    "title": "build a restaurant website",
+    "description": "make it simple",
+    "reward": "1.0",
+    "deadline_str": "Ending soon",
+    "requirements": [
+      "Responsive design (mobile and desktop)",
+      "Clean code with TypeScript",
+      "Documentation included"
+    ],
+    "status": "completed",
+    "category": "Development",
+    "app_id": 758213451,
+    "tx_id": "ZMSEI3ENQSEZCJTWV5Z3Y5CN3K3XWZJRDGYMYODWGRDXASGAVX5Q",
+    "contract_address": "7E6VW6ABMVGHZ67IIMAX2PJAHYSV6PNAFLYFOFVZEE5QNHWRTJ5RQKXB4Y",
+    "platform_fee": 0.5,
+    "proof": "https://github.com/abrar-0020/Restaurant-Website",
+    "worker": "demo_wallet_address_to_be_replaced"
+  }
+]
