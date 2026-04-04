@@ -43,6 +43,7 @@ DEOXYS is a hybrid Web3 application built on Algorand. It allows creators to loc
 
 ### Step B: Submitting Work (Worker Role)
 1. Navigate to "Browse Bounties" and select your bounty.
+
 2. In the "Submit Work" section, enter an IPFS Hash or a URL as proof.
 3. Click "Submit Proof via Smart Contract".
 4. **Reaction**: The Smart Contract state is updated on-chain to `in_progress`.
@@ -73,3 +74,9 @@ DEOXYS is a hybrid Web3 application built on Algorand. It allows creators to loc
 
 ---
 Built with pride for the Algorand Blockchain Ecosystem.
+
+
+
+backend start command: .\venv\Scripts\activate; uvicorn api:app --reload
+
+Frontend start command: npm run dev
