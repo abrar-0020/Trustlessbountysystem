@@ -24,6 +24,12 @@ The contract maps to the following functions as requested:
 - **validate_and_release**: Triggered by the creator. Unlocks and pays the worker (account 1) the Algos stored in escrow via an Inner Transaction and changes status to `2` (Completed).
 - **raise_dispute**: Flagger for when conditions fail. Changes status to `3` (Disputed).
 
+## Backend Start Command:
+.\venv\Scripts\activate; uvicorn api:app --reload
+
+## Frontend start command: 
+npm run dev
+
 ## Compiling to TEAL
 Execute the Python script to build the TEAL files (`bounty_approval.teal` and `bounty_clear_state.teal`):
 ```bash
