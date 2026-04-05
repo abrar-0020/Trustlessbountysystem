@@ -25,10 +25,14 @@ The contract maps to the following functions as requested:
 - **raise_dispute**: Flagger for when conditions fail. Changes status to `3` (Disputed).
 
 ## Backend Start Command:
+```bash
 .\venv\Scripts\activate; uvicorn api:app --reload
+```
 
 ## Frontend start command: 
+```bash
 npm run dev
+```
 
 ## Compiling to TEAL
 Execute the Python script to build the TEAL files (`bounty_approval.teal` and `bounty_clear_state.teal`):
