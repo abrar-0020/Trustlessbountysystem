@@ -16,25 +16,21 @@ import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router";
 import { motion } from "motion/react";
 import { toast } from "sonner";
+import { useWallet } from "../context/WalletContext";
+import { resolveDisputeOnChain } from "../utils/algorand";
 
 export function DisputePage() {
   const { id } = useParams();
+  const { address, isConnected, connectWallet, peraWallet } = useWallet();
   const [bountyData, setBountyData] = useState<any>(null);
   const [voted, setVoted] = useState<"approve" | "reject" | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [walletAddr, setWalletAddr] = useState("Loading...");
 
   useEffect(() => {
      fetch(`http://127.0.0.1:8000/bounties/${id}`)
         .then(res => res.json())
         .then(data => setBountyData(data))
         .catch(err => console.error(err));
-
-     fetch("http://127.0.0.1:8000/wallet")
-        .then(res => res.json())
-        .then(data => {
-            setWalletAddr(`${data.address.substring(0,4)}...${data.address.substring(data.address.length - 4)}`);
-        }).catch(err => console.error(err));
   }, [id]);
 
   if (!bountyData) return <div className="p-8 text-center text-[#4B4B4B]">Loading dispute data...</div>;
@@ -45,23 +41,47 @@ export function DisputePage() {
   const approvePercent = total === 0 ? 0 : Math.round((votesFor / total) * 100);
   const rejectPercent = total === 0 ? 0 : 100 - approvePercent;
 
+  const isCreator = isConnected && address && bountyData.creator_address &&
+    address.toLowerCase() === bountyData.creator_address.toLowerCase();
+
   const handleVote = async (type: "approve" | "reject") => {
+    if (!isConnected || !address || !peraWallet) {
+      toast.error("Connect your Pera Wallet to resolve this dispute");
+      connectWallet();
+      return;
+    }
     if (voted) {
       toast.error("You have already voted on this dispute");
       return;
     }
     setSubmitting(true);
-    toast.loading("Casting vote on-chain...", { id: "vote" });
-    await new Promise((r) => setTimeout(r, 1600));
-    toast.success(
-      type === "approve" ? "Vote cast: Approve" : "Vote cast: Reject",
-      {
-        id: "vote",
-        description: "Your vote has been recorded on-chain.",
-      }
-    );
-    setVoted(type);
-    setSubmitting(false);
+    toast.loading(`Open Pera Wallet to sign the ${type} resolution...`, { id: "vote" });
+    try {
+        const workerAddr = bountyData.worker || address;
+        // 1. Sign + broadcast directly from the browser
+        const txId = await resolveDisputeOnChain(peraWallet, address, workerAddr, bountyData.app_id, type);
+        // 2. Tell backend to update metadata
+        const response = await fetch(`http://127.0.0.1:8000/bounties/${id}/resolve_dispute`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ resolution: type, tx_id: txId })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.detail || "Resolution failed");
+        
+        toast.success(
+          type === "approve" ? "Dispute Resolved: Funds Released to Worker" : "Dispute Resolved: Funds Refunded to Creator",
+          { id: "vote", description: `TXID: ${txId.substring(0, 10)}...` }
+        );
+        setVoted(type);
+        setBountyData(data.bounty);
+    } catch (err: unknown) {
+        let msg = "An unexpected error occurred";
+        if (err instanceof Error) msg = err.message;
+        toast.error("Resolution Failed", { id: "vote", description: msg });
+    } finally {
+        setSubmitting(false);
+    }
   };
 
   return (
@@ -89,9 +109,24 @@ export function DisputePage() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <h1 className="text-[#1F1F1F]">Dispute Resolution</h1>
-              <Badge variant="warning" size="md">Under Review</Badge>
+              <Badge 
+                 variant={
+                    bountyData.status === 'completed' ? 'success' : 
+                    bountyData.status === 'refunded' ? 'danger' : 
+                    bountyData.status === 'failed' ? 'danger' : 
+                    'warning'
+                 } 
+                 size="md"
+              >
+                  {
+                    bountyData.status === 'completed' ? 'Resolved (Paid)' : 
+                    bountyData.status === 'refunded' ? 'Resolved (Refunded)' : 
+                    bountyData.status === 'failed' ? 'Resolved (Failed)' : 
+                    'Under Review'
+                  }
+              </Badge>
             </div>
-            <p className="text-sm text-[#4B4B4B]">Community voting in progress</p>
+            <p className="text-sm text-[#4B4B4B]">{bountyData.status === 'disputed' ? "Community voting in progress" : "Dispute closed"}</p>
           </div>
         </div>
       </motion.div>
@@ -119,7 +154,7 @@ export function DisputePage() {
               </div>
               <div className="bg-[#F5F5F5] border border-[#E5E5E5] rounded-xl p-3">
                 <p className="text-xs text-[#CFCFCF] mb-1">Creator</p>
-                <p className="text-sm font-mono text-[#1F1F1F]">{walletAddr}</p>
+                <p className="text-sm font-mono text-[#1F1F1F]">{bountyData.creator_address ? `${bountyData.creator_address.substring(0,6)}...${bountyData.creator_address.substring(bountyData.creator_address.length-4)}` : "Unknown"}</p>
               </div>
               <div className="bg-[#F5F5F5] border border-[#E5E5E5] rounded-xl p-3">
                 <p className="text-xs text-[#CFCFCF] mb-1">Submitted by</p>

@@ -1,4 +1,4 @@
-import { TrendingUp, DollarSign, Clock, CheckCircle2, ArrowRight, Plus } from "lucide-react";
+import { TrendingUp, DollarSign, Clock, CheckCircle2, ArrowRight, Plus, Wallet } from "lucide-react";
 import { Card } from "../components/Card";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
@@ -7,6 +7,7 @@ import { ReputationCard } from "../components/ReputationCard";
 import { Link } from "react-router";
 import { motion } from "motion/react";
 import { toast } from "sonner";
+import { useWallet } from "../context/WalletContext";
 
 import { useState, useEffect } from "react";
 
@@ -18,11 +19,8 @@ const statusConfig = {
 };
 
 export function Dashboard() {
-  const [walletContext, setWalletContext] = useState<any>({
-      address: "Connecting...",
-      shortAddress: "...",
-      balance: "0.00"
-  });
+  const { address, shortAddress, isConnected, connectWallet } = useWallet();
+  const [algoBalance, setAlgoBalance] = useState("0.00");
   const [activeBounty, setActiveBounty] = useState<any>(null);
   const [recentBounties, setRecentBounties] = useState<any[]>([]);
   const [stats, setStats] = useState<any[]>([
@@ -45,18 +43,12 @@ export function Dashboard() {
   ]);
 
   useEffect(() => {
-     fetch("http://127.0.0.1:8000/wallet")
-        .then(res => res.json())
-        .then(data => {
-            setWalletContext({
-                address: data.address,
-                shortAddress: `${data.address.substring(0,4)}...${data.address.substring(data.address.length - 4)}`,
-                balance: data.balance.toFixed(2),
-                completedBounties: data.completedBounties,
-                successRate: data.successRate,
-                totalEarned: data.totalEarned
-            });
-        }).catch(err => console.error("Wallet fetch error:", err));
+     if (isConnected && address) {
+       fetch(`http://127.0.0.1:8000/wallet/${address}`)
+          .then(res => res.json())
+          .then(data => setAlgoBalance(data.balance?.toFixed(2) || "0.00"))
+          .catch(err => console.error("Balance fetch error:", err));
+     }
 
      fetch("http://127.0.0.1:8000/bounties")
       .then(res => res.json())
@@ -86,7 +78,7 @@ export function Dashboard() {
             }
          ]);
       });
-  }, []);
+  }, [isConnected, address]);
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto">
       {/* Page header */}
@@ -163,7 +155,7 @@ export function Dashboard() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.2 + i * 0.07, duration: 0.3 }}
               >
-                <Link to={`/app/bounties/${bounty.id}`}>
+                <Link to={bounty.status === 'disputed' ? `/app/disputes/${bounty.id}` : `/app/bounties/${bounty.id}`}>
                   <Card
                     hover
                     className="group"
@@ -226,10 +218,10 @@ export function Dashboard() {
 
           {/* Reputation card */}
           <ReputationCard
-            address={walletContext.shortAddress}
-            completedBounties={walletContext.completedBounties || 0}
-            successRate={walletContext.successRate || 100}
-            totalEarned={walletContext.totalEarned || 0}
+            address={shortAddress || "Not connected"}
+            completedBounties={0}
+            successRate={100}
+            totalEarned={"0"}
           />
 
           {/* Quick action */}
@@ -241,19 +233,29 @@ export function Dashboard() {
               className="text-[#1F1F1F] mb-1"
               style={{ fontSize: "28px", fontWeight: 600, lineHeight: 1.2 }}
             >
-              {walletContext.balance}
+              {isConnected ? algoBalance : "—"}
             </p>
-            <p className="text-xs text-[#CFCFCF] mb-4">Available ALGO</p>
-            <button
-              onClick={() =>
-                toast.success("Transaction initiated", {
-                  description: "Connecting to Pera Wallet...",
-                })
-              }
-              className="w-full py-2.5 rounded-xl border border-[#E5E5E5] bg-white text-sm text-[#1F1F1F] hover:bg-[#F0F0F0] transition-colors"
-            >
-              Top up wallet
-            </button>
+            <p className="text-xs text-[#CFCFCF] mb-4">{isConnected ? "Available ALGO" : "Wallet not connected"}</p>
+            {isConnected ? (
+              <button
+                onClick={() =>
+                  toast.info("Use Pera Wallet to manage your ALGO", {
+                    description: "Open the Pera app to send, receive, or swap ALGO.",
+                  })
+                }
+                className="w-full py-2.5 rounded-xl border border-[#E5E5E5] bg-white text-sm text-[#1F1F1F] hover:bg-[#F0F0F0] transition-colors"
+              >
+                Open Pera Wallet
+              </button>
+            ) : (
+              <button
+                onClick={connectWallet}
+                className="w-full py-2.5 rounded-xl border border-[#2563EB] bg-[#2563EB] text-sm text-white hover:bg-[#1d4ed8] transition-colors flex items-center justify-center gap-2"
+              >
+                <Wallet className="w-4 h-4" />
+                Connect Wallet
+              </button>
+            )}
           </Card>
         </div>
       </div>

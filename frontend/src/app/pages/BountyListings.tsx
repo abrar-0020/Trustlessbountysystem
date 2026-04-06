@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card } from "../components/Card";
 import { Badge } from "../components/Badge";
 import { Clock, Search, ArrowRight, ListFilter, Layers } from "lucide-react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { motion } from "motion/react";
 
 interface Bounty {
@@ -28,9 +28,10 @@ const statusConfig = {
 const filters = ["All", "Open", "In Progress", "Completed", "Disputed"];
 
 export function BountyListings() {
+  const [searchParams] = useSearchParams();
   const [bounties, setBounties] = useState<Bounty[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedStatus, setSelectedStatus] = useState<string>("All");
+  const [selectedStatus, setSelectedStatus] = useState<string>(searchParams.get("filter") || "All");
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
@@ -46,6 +47,11 @@ export function BountyListings() {
          setIsLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+      const filter = searchParams.get("filter");
+      if (filter) setSelectedStatus(filter);
+  }, [searchParams]);
 
   const filteredBounties = bounties.filter((bounty) => {
     const matchesStatus =
@@ -134,7 +140,7 @@ export function BountyListings() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.06, duration: 0.3 }}
           >
-            <Link to={`/app/bounties/${bounty.id}`}>
+            <Link to={bounty.status === 'disputed' ? `/app/disputes/${bounty.id}` : `/app/bounties/${bounty.id}`}>
               <Card hover className="group">
                 <div className="flex flex-col lg:flex-row lg:items-start gap-4">
                   {/* Left: content */}

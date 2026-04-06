@@ -2,6 +2,7 @@ import { Wallet, ChevronDown, Copy, LogOut, ExternalLink } from "lucide-react";
 import { Button } from "./Button";
 import { Link } from "react-router";
 import { useState, useEffect } from "react";
+import { useWallet } from "../context/WalletContext";
 
 interface NavbarProps {
   showWallet?: boolean;
@@ -10,28 +11,23 @@ interface NavbarProps {
 export function Navbar({ showWallet = false }: NavbarProps) {
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [walletContext, setWalletContext] = useState<any>({
-      address: "Connecting...",
-      shortAddress: "Loading...",
-      balance: "0.00"
-  });
+  
+  const { isConnected, shortAddress, address, connectWallet, disconnectWallet } = useWallet();
+  const [balance, setBalance] = useState("0.00");
 
   useEffect(() => {
-    if (showWallet) {
-        fetch("http://127.0.0.1:8000/wallet")
+    if (isConnected && address) {
+        fetch(`http://127.0.0.1:8000/wallet/${address}`)
         .then(res => res.json())
         .then(data => {
-            setWalletContext({
-                address: data.address,
-                shortAddress: `${data.address.substring(0,4)}...${data.address.substring(data.address.length - 4)}`,
-                balance: data.balance.toFixed(2)
-            });
+            setBalance(data.balance.toFixed(2));
         }).catch(err => console.error("Wallet fetch error:", err));
     }
-  }, [showWallet]);
+  }, [isConnected, address]);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(walletContext.address);
+    if(!address) return;
+    navigator.clipboard.writeText(address);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -53,12 +49,12 @@ export function Navbar({ showWallet = false }: NavbarProps) {
         </Link>
 
         {/* Right side */}
-        {showWallet ? (
+        {showWallet && isConnected ? (
           <div className="flex items-center gap-3">
             {/* Balance pill */}
             <div className="hidden md:flex items-center gap-2 px-3.5 py-1.5 bg-[#F5F5F5] border border-[#E5E5E5] rounded-xl">
               <div className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
-              <span className="text-sm text-[#4B4B4B]">{walletContext.balance}</span>
+              <span className="text-sm text-[#4B4B4B]">{balance}</span>
               <span className="text-sm text-[#CFCFCF]">ALGO</span>
             </div>
 
@@ -71,7 +67,7 @@ export function Navbar({ showWallet = false }: NavbarProps) {
                 <div className="w-5 h-5 rounded-full bg-[#2563EB]/10 flex items-center justify-center">
                   <Wallet className="w-3 h-3 text-[#2563EB]" />
                 </div>
-                <span className="font-mono">{walletContext.shortAddress}</span>
+                <span className="font-mono">{shortAddress}</span>
                 <ChevronDown
                   className={`w-3.5 h-3.5 text-[#CFCFCF] transition-transform ${walletMenuOpen ? "rotate-180" : ""}`}
                 />
@@ -81,12 +77,12 @@ export function Navbar({ showWallet = false }: NavbarProps) {
                 <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-[#E5E5E5] rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] overflow-hidden z-50">
                   <div className="px-4 py-3 border-b border-[#E5E5E5]">
                     <p className="text-xs text-[#CFCFCF] mb-1">Connected wallet</p>
-                    <p className="text-sm font-mono text-[#1F1F1F]">{walletContext.shortAddress}</p>
+                    <p className="text-sm font-mono text-[#1F1F1F]">{shortAddress}</p>
                   </div>
                   <div className="px-4 py-3 border-b border-[#E5E5E5]">
                     <p className="text-xs text-[#CFCFCF] mb-1">Balance</p>
                     <p className="text-base text-[#1F1F1F]">
-                      {walletContext.balance} <span className="text-[#CFCFCF]">ALGO</span>
+                      {balance} <span className="text-[#CFCFCF]">ALGO</span>
                     </p>
                   </div>
                   <div className="p-2">
@@ -98,14 +94,15 @@ export function Navbar({ showWallet = false }: NavbarProps) {
                       {copied ? "Copied!" : "Copy address"}
                     </button>
                     <a
-                      href="#"
-                      onClick={(e) => e.preventDefault()}
+                      href={address ? `https://testnet.algoexplorer.io/address/${address}` : "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="flex w-full items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-[#4B4B4B] hover:bg-[#F5F5F5] transition-colors"
                     >
                       <ExternalLink className="w-4 h-4" />
-                      View on explorer
+                      View on Explorer
                     </a>
-                    <button className="flex w-full items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-[#EF4444] hover:bg-[#FEF2F2] transition-colors">
+                    <button onClick={disconnectWallet} className="flex w-full items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-[#EF4444] hover:bg-[#FEF2F2] transition-colors">
                       <LogOut className="w-4 h-4" />
                       Disconnect
                     </button>
@@ -114,6 +111,11 @@ export function Navbar({ showWallet = false }: NavbarProps) {
               )}
             </div>
           </div>
+        ) : showWallet && !isConnected ? (
+          <Button onClick={connectWallet} variant="primary" size="sm">
+            <Wallet className="w-3.5 h-3.5" />
+            Connect Wallet
+          </Button>
         ) : (
           <div className="flex items-center gap-6">
             <Link
@@ -128,7 +130,7 @@ export function Navbar({ showWallet = false }: NavbarProps) {
             >
               Browse Bounties
             </Link>
-            <Button variant="primary" size="sm">
+            <Button onClick={connectWallet} variant="primary" size="sm">
               <Wallet className="w-3.5 h-3.5" />
               Connect Wallet
             </Button>

@@ -19,6 +19,8 @@ import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router";
 import { motion } from "motion/react";
 import { toast } from "sonner";
+import { useWallet } from "../context/WalletContext";
+import { submitProofOnChain, validateOnChain, disputeOnChain } from "../utils/algorand";
 
 function getErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
@@ -36,9 +38,10 @@ function getErrorMessage(err: unknown): string {
 
 export function BountyDetails() {
   const { id } = useParams();
+  const { address, isConnected, connectWallet, peraWallet } = useWallet();
   const [bountyDetails, setBountyDetails] = useState<any>(null);
-  const [ipfsHash, setIpfsHash] = useState("");
-  const [submissionNote, setSubmissionNote] = useState("");
+  const [workLink, setWorkLink] = useState("");
+  const [outputResult, setOutputResult] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [validating, setValidating] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -58,75 +61,76 @@ export function BountyDetails() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ipfsHash.trim()) {
-      toast.error("Please provide a proof URL or IPFS hash");
+    if (!isConnected || !address || !peraWallet) {
+      toast.error("Connect your Pera Wallet to submit work");
+      connectWallet();
       return;
     }
+    if (!workLink.trim()) {
+      toast.error("Please provide a proof URL or submission link");
+      return;
+    }
+    const isAuto = bountyDetails.validation_type === 'auto';
+    if (isAuto && !outputResult.trim()) {
+        toast.error("Please provide the output result for auto-validation");
+        return;
+    }
+    
     setSubmitting(true);
-    toast.loading("Submitting proof on-chain...", { id: "submit-work" });
+    toast.loading("Open Pera Wallet to sign...", { id: "submit-work" });
     try {
+        // 1. Sign + broadcast directly from the browser
+        const txId = await submitProofOnChain(peraWallet, address, bountyDetails.app_id, workLink.trim());
+
+        // 2. Tell backend to update metadata (no signed bytes needed)
         const response = await fetch(`http://127.0.0.1:8000/bounties/${id}/submit_proof`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                ipfs_hash: ipfsHash,
-                worker_address: null
+                work_link: workLink,
+                output: isAuto ? outputResult.trim() : null,
+                worker_address: address,
+                tx_id: txId
             })
         });
-        let data: any;
-        try {
-          data = await response.json();
-        } catch {
-          throw new Error(`Server error (${response.status}): ${response.statusText}`);
-        }
-        if (!response.ok) {
-          const detail = data?.detail;
-          throw new Error(
-            typeof detail === "string" ? detail :
-            detail != null ? JSON.stringify(detail) :
-            "Submission failed"
-          );
-        }
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.detail || "Submission failed");
         
-        toast.success("Work submitted successfully!", {
+        toast.success("Work submitted on-chain!", {
           id: "submit-work",
-          description: `TXID: ${(data.txid || data.tx_id || "").substring(0, 10)}...`,
+          description: `TXID: ${txId.substring(0, 10)}...`,
         });
         setBountyDetails(data.bounty);
     } catch (err: unknown) {
         toast.error("Transaction Failed", { id: "submit-work", description: getErrorMessage(err) });
     } finally {
         setSubmitting(false);
-        setIpfsHash("");
-        setSubmissionNote("");
+        setWorkLink("");
+        setOutputResult("");
     }
   };
 
   const handleValidate = async () => {
+    if (!isConnected || !address || !peraWallet) {
+      toast.error("Connect your Pera Wallet to approve work"); connectWallet(); return;
+    }
     setValidating(true);
-    toast.loading("Validating and Releasing Funds...", { id: "validate-work" });
+    toast.loading("Open Pera Wallet to sign fund release...", { id: "validate-work" });
     try {
+        const workerAddr = bountyDetails.worker || address;
+        // 1. Sign + broadcast directly from the browser
+        const txId = await validateOnChain(peraWallet, address, workerAddr, bountyDetails.app_id);
+        // 2. Tell backend
         const response = await fetch(`http://127.0.0.1:8000/bounties/${id}/validate`, {
-            method: "POST"
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tx_id: txId })
         });
-        let data: any;
-        try {
-          data = await response.json();
-        } catch {
-          throw new Error(`Server error (${response.status}): ${response.statusText}`);
-        }
-        if (!response.ok) {
-          const detail = data?.detail;
-          throw new Error(
-            typeof detail === "string" ? detail :
-            detail != null ? JSON.stringify(detail) :
-            "Validation failed"
-          );
-        }
-        
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.detail || "Validation failed");
         toast.success("Bounty Validated!", {
           id: "validate-work",
-          description: `Funds Released. TXID: ${(data.txid || data.tx_id || "").substring(0, 10)}...`,
+          description: `Funds Released. TXID: ${txId.substring(0, 10)}...`,
         });
         setBountyDetails(data.bounty);
     } catch (err: unknown) {
@@ -136,8 +140,44 @@ export function BountyDetails() {
     }
   };
 
+  const handleDispute = async () => {
+    if (!isConnected || !address || !peraWallet) {
+      toast.error("Connect your Pera Wallet to raise a dispute"); connectWallet(); return;
+    }
+    if (!window.confirm("Reject this work? This will raise an official dispute on-chain.")) return;
+    
+    setValidating(true);
+    toast.loading("Open Pera Wallet to sign the dispute...", { id: "dispute-work" });
+    try {
+        // 1. Sign + broadcast directly from the browser
+        const txId = await disputeOnChain(peraWallet, address, bountyDetails.app_id);
+        // 2. Tell backend
+        const response = await fetch(`http://127.0.0.1:8000/bounties/${id}/dispute`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tx_id: txId })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.detail || "Dispute failed");
+        toast.warning("Bounty Disputed!", {
+          id: "dispute-work",
+          description: `Status updated on-chain. TXID: ${txId.substring(0, 10)}...`,
+        });
+        setBountyDetails(data.bounty);
+    } catch (err: unknown) {
+        toast.error("Dispute Failed", { id: "dispute-work", description: getErrorMessage(err) });
+    } finally {
+        setValidating(false);
+    }
+  };
+
   if (loading) return <div className="p-8 text-center text-[#4B4B4B]">Loading smart contract data...</div>;
   if (!bountyDetails) return <div className="p-8 text-center text-[#EF4444]">Bounty not found</div>;
+
+  const isCreator = isConnected && address && bountyDetails.creator_address &&
+    address.toLowerCase() === bountyDetails.creator_address.toLowerCase();
+  const isWorker = isConnected && address && bountyDetails.worker &&
+    address.toLowerCase() === bountyDetails.worker.toLowerCase();
 
   const activeStep = bountyDetails.status === "completed" ? 5 : (bountyDetails.status === "in_progress" || bountyDetails.status === "submitted" ? 3 : 2);
 
@@ -159,7 +199,14 @@ export function BountyDetails() {
       >
         <div className="flex items-start justify-between gap-4 mb-3">
           <h1 className="text-[#1F1F1F] flex-1">{bountyDetails.title}</h1>
-          <Badge variant={bountyDetails.status === 'completed' ? 'success' : 'default'} size="md">
+          <Badge 
+            variant={
+               bountyDetails.status === 'completed' ? 'success' : 
+               bountyDetails.status === 'disputed' ? 'danger' : 
+               'default'
+            } 
+            size="md"
+          >
             {bountyDetails.status.toUpperCase()}
           </Badge>
         </div>
@@ -199,6 +246,22 @@ export function BountyDetails() {
       <div className="grid lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-4">
           <Card>
+            <div className="flex justify-between items-center mb-4">
+               <h3 className="text-[#1F1F1F]">Validation Mode</h3>
+               {bountyDetails.validation_type === 'auto' ? (
+                   <Badge variant="success">Auto Validation Enabled</Badge>
+               ) : (
+                   <Badge variant="default">Manual Validation</Badge>
+               )}
+            </div>
+            {bountyDetails.validation_type === 'auto' ? (
+                 <p className="text-sm text-[#4B4B4B] leading-relaxed">This bounty uses zero-knowledge hash matching. The escrow will automatically run validation and release funds immediately if the submitted hash matches the creator's exact expected output.</p>
+            ) : (
+                 <p className="text-sm text-[#4B4B4B] leading-relaxed">This bounty requires manual review from the creator to release the escrow funds.</p>
+            )}
+          </Card>
+
+          <Card>
             <h3 className="text-[#1F1F1F] mb-3">Description</h3>
             <p className="text-sm text-[#4B4B4B] leading-relaxed">
               {bountyDetails.description}
@@ -225,7 +288,7 @@ export function BountyDetails() {
                 <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                     <label
-                    htmlFor="ipfs"
+                    htmlFor="workLink"
                     className="block text-sm text-[#1F1F1F] mb-2"
                     >
                     Submission Link (GitHub, IPFS, etc.){" "}
@@ -234,15 +297,31 @@ export function BountyDetails() {
                     <div className="relative">
                     <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#CFCFCF]" />
                     <input
-                        id="ipfs"
+                        id="workLink"
                         type="text"
-                        value={ipfsHash}
-                        onChange={(e) => setIpfsHash(e.target.value)}
+                        value={workLink}
+                        onChange={(e) => setWorkLink(e.target.value)}
                         placeholder="github.com/your-repo or ipfs://..."
                         className="w-full pl-11 pr-4 py-3 bg-white border border-[#E5E5E5] rounded-xl text-sm text-[#1F1F1F] placeholder:text-[#CFCFCF] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
                     />
                     </div>
                 </div>
+
+                {bountyDetails.validation_type === 'auto' && (
+                  <div>
+                      <label htmlFor="outputResult" className="block text-sm text-[#1F1F1F] mb-2">
+                        Enter Result Output <span className="text-[#EF4444]">*</span>
+                      </label>
+                      <input
+                          id="outputResult"
+                          type="text"
+                          value={outputResult}
+                          onChange={(e) => setOutputResult(e.target.value)}
+                          placeholder="e.g. 9 or success message"
+                          className="w-full px-4 py-3 bg-white border border-[#E5E5E5] rounded-xl text-sm text-[#1F1F1F] placeholder:text-[#CFCFCF] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
+                      />
+                  </div>
+                )}
 
                 <Button
                     type="submit"
@@ -258,16 +337,43 @@ export function BountyDetails() {
 
                 {bountyDetails.status === 'in_progress' && (
                     <div className="mt-6 pt-6 border-t border-[#E5E5E5]">
-                        <h4 className="text-sm text-[#1F1F1F] font-medium mb-3">Creator Actions (Demo)</h4>
-                        <Button 
-                            variant="primary" 
-                            size="md" 
-                            className="w-full bg-[#10B981] hover:bg-[#059669]"
-                            loading={validating}
-                            onClick={handleValidate}
-                        >
-                            <Check className="w-4 h-4" /> Validate Proof & Release Escrow
-                        </Button>
+                        <h4 className="text-sm text-[#1F1F1F] font-medium mb-3">
+                           {bountyDetails.validation_type === 'auto' ? 'Execute On-Chain Validation' : 'Creator Actions (Demo)'}
+                        </h4>
+                        <div className="flex gap-3">
+                            {bountyDetails.validation_type === 'auto' ? (
+                                <Button 
+                                    variant="primary" 
+                                    size="md" 
+                                    className="w-full bg-[#10B981] hover:bg-[#059669]"
+                                    loading={validating}
+                                    onClick={handleValidate}
+                                >
+                                    <Check className="w-4 h-4" /> Trigger Auto-Validation
+                                </Button>
+                            ) : (
+                                <>
+                                    <Button 
+                                        variant="primary" 
+                                        size="md" 
+                                        className="w-full bg-[#10B981] hover:bg-[#059669]"
+                                        loading={validating}
+                                        onClick={handleValidate}
+                                    >
+                                        <Check className="w-4 h-4" /> Approve & Release Funds
+                                    </Button>
+                                    <Button 
+                                        variant="outline" 
+                                        size="md" 
+                                        className="w-full hover:bg-red-50 text-red-600 border-red-200"
+                                        onClick={handleDispute}
+                                        loading={validating}
+                                    >
+                                       Reject Work
+                                    </Button>
+                                </>
+                            )}
+                        </div>
                     </div>
                 )}
             </Card>

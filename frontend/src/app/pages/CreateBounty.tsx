@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card } from "../components/Card";
 import { Button } from "../components/Button";
 import {
@@ -11,9 +11,12 @@ import {
   ChevronLeft,
   Check,
   Info,
+  Wallet,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
+import { useWallet } from "../context/WalletContext";
+import { createAndFundBounty } from "../utils/algorand";
 
 const STEPS = [
   { id: 1, label: "Details", description: "Title & description" },
@@ -30,17 +33,7 @@ export function CreateBounty() {
   const [currentStep, setCurrentStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [walletBalance, setWalletBalance] = useState("0");
-  const [platformFee, setPlatformFee] = useState(0.5);
-
-  useEffect(() => {
-     fetch("http://127.0.0.1:8000/wallet")
-        .then(res => res.json())
-        .then(data => {
-            setWalletBalance(data.balance.toFixed(2));
-            if (data.platform_fee) setPlatformFee(data.platform_fee);
-        }).catch(err => console.error(err));
-  }, []);
+  const { address, isConnected, connectWallet, peraWallet } = useWallet();
 
   // Form state
   const [title, setTitle] = useState("");
@@ -48,6 +41,7 @@ export function CreateBounty() {
   const [category, setCategory] = useState("");
   const [reward, setReward] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [expectedOutput, setExpectedOutput] = useState("");
   const [requirements, setRequirements] = useState<Requirement[]>([
     { id: 1, text: "Responsive design (mobile and desktop)" },
     { id: 2, text: "Clean code with TypeScript" },
@@ -75,34 +69,63 @@ export function CreateBounty() {
   };
 
   const handleSubmit = async () => {
+    if (!isConnected || !address || !peraWallet) {
+      toast.error("Please connect your Pera Wallet first");
+      connectWallet();
+      return;
+    }
+
+    const rewardAlgo = parseFloat(reward || "0");
+    if (!title || !description || rewardAlgo <= 0 || !deadline) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
     setSubmitting(true);
-    toast.loading("Deploying smart contract to Algorand TestNet...", { id: "create-bounty" });
+    toast.loading("Step 1/2: Open Pera Wallet to deploy the contract...", { id: "create-bounty" });
     try {
+      const deadlineTimestamp = Math.floor(new Date(deadline).getTime() / 1000);
+
+      // Sign + broadcast BOTH transactions (deploy + fund) directly from the browser
+      const { deployTxId, fundTxId, appId } = await createAndFundBounty(
+        peraWallet,
+        address,
+        rewardAlgo,
+        deadlineTimestamp
+      );
+
+      // Tell backend to store metadata only (tx already confirmed on-chain)
+      toast.loading("Saving bounty metadata...", { id: "create-bounty" });
       const response = await fetch("http://127.0.0.1:8000/bounties/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: title || "Untitled Bounty",
           description: description || "No description provided",
-          reward_algo: parseFloat(reward || "0"),
-          deadline_timestamp: Math.floor(new Date(deadline || Date.now() + 86400000).getTime() / 1000),
-          requirements: requirements.map(r => r.text).filter(Boolean)
+          reward_algo: rewardAlgo,
+          deadline_timestamp: deadlineTimestamp,
+          requirements: requirements.map(r => r.text).filter(Boolean),
+          expected_output: expectedOutput || undefined,
+          creator_address: address,
+          app_id: appId,
+          tx_id: deployTxId
         })
       });
-      
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || "Failed to create bounty");
 
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "Failed to save bounty");
+      
       toast.success("Bounty Created & Escrow Funded!", {
         id: "create-bounty",
-        description: `App ID: ${data.bounty.app_id} | TX: ${(data.bounty.txid || data.bounty.tx_id || "").substring(0, 10)}...`,
+        description: `App ID: ${appId} | Deploy TX: ${deployTxId.substring(0, 10)}...`,
       });
       setSubmitting(false);
       setSubmitted(true);
     } catch (err: any) {
+      const msg = err?.message || "Transaction failed or was rejected";
       toast.error("Transaction Failed", {
         id: "create-bounty",
-        description: err.message,
+        description: msg,
       });
       setSubmitting(false);
     }
@@ -255,6 +278,23 @@ export function CreateBounty() {
                     className="w-full px-4 py-3 bg-white border border-[#E5E5E5] rounded-xl text-sm text-[#1F1F1F] placeholder:text-[#CFCFCF] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all resize-none"
                   />
                 </div>
+
+                <div>
+                  <label htmlFor="expectedOutput" className="block text-sm text-[#1F1F1F] mb-2">
+                    Expected Output <span className="text-[#CFCFCF] text-xs font-normal">(Optional, for Auto Validation)</span>
+                  </label>
+                  <div className="relative">
+                    <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#CFCFCF]" />
+                    <input
+                      id="expectedOutput"
+                      type="text"
+                      value={expectedOutput}
+                      onChange={(e) => setExpectedOutput(e.target.value)}
+                      placeholder="Exact text or hash to match for auto validation"
+                      className="w-full pl-11 pr-4 py-3 bg-white border border-[#E5E5E5] rounded-xl text-sm text-[#1F1F1F] placeholder:text-[#CFCFCF] focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-all"
+                    />
+                  </div>
+                </div>
               </div>
             </Card>
           )}
@@ -405,7 +445,7 @@ export function CreateBounty() {
                 {/* Fee breakdown */}
                 <div className="flex items-center gap-2 text-xs text-[#CFCFCF] mb-5">
                   <Info className="w-3.5 h-3.5" />
-                  Platform fee: {platformFee} ALGO · Algorand tx fee: ~0.001 ALGO
+                  Algorand tx fee: ~0.002 ALGO · Powered by Pera Wallet signing
                 </div>
 
                 <Button
@@ -416,16 +456,23 @@ export function CreateBounty() {
                   loading={submitting}
                 >
                   <Lock className="w-4 h-4" />
-                  {submitting ? "Processing..." : "Lock Funds & Create Bounty"}
+                  {submitting ? "Processing..." : isConnected ? "Sign & Create Bounty" : "Connect Wallet to Continue"}
                 </Button>
               </Card>
 
               {/* Wallet balance */}
               <div className="flex items-center justify-between px-1">
-                <span className="text-xs text-[#CFCFCF]">Wallet balance</span>
-                <span className="text-sm text-[#4B4B4B]">
-                  {walletBalance} <span className="text-[#CFCFCF]">ALGO</span>
-                </span>
+                <span className="text-xs text-[#CFCFCF]">Connected Wallet</span>
+                {isConnected ? (
+                  <span className="text-sm text-[#4B4B4B] font-mono">
+                    {address?.substring(0,6)}...{address?.substring(address.length - 4)}
+                  </span>
+                ) : (
+                  <button onClick={connectWallet} className="text-sm text-[#2563EB] flex items-center gap-1 hover:underline">
+                    <Wallet className="w-3.5 h-3.5" />
+                    Connect Pera Wallet
+                  </button>
+                )}
               </div>
             </div>
           )}

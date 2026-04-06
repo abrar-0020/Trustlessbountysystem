@@ -17,7 +17,7 @@ const navigation = [
   { name: "Create Bounty", href: "/app/create", icon: Plus },
   { name: "My Bounties", href: "/app/bounties", icon: List },
   { name: "Submissions", href: "/app/bounties", icon: FileText },
-  { name: "Disputes", href: "/app/disputes/1", icon: AlertCircle },
+  { name: "Disputes", href: "/app/bounties?filter=Disputed", icon: AlertCircle },
 ];
 
 const bottomNav = [
@@ -55,11 +55,6 @@ export function Sidebar() {
                 className={`w-4 h-4 flex-shrink-0 ${active ? "text-[#2563EB]" : "text-[#CFCFCF]"}`}
               />
               <span>{item.name}</span>
-              {item.name === "Disputes" && (
-                <span className="ml-auto px-1.5 py-0.5 text-xs bg-[#FEF3C7] text-[#B45309] rounded-full">
-                  1
-                </span>
-              )}
             </Link>
           );
         })}
