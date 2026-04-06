@@ -7,7 +7,7 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills'
 export default defineConfig({
   plugins: [
     // The React and Tailwind plugins are both required for Make, even if
-    // Tailwind is not being actively used – do not remove them
+    // Tailwind is not being actively used - do not remove them
     react(),
     tailwindcss(),
     // Polyfill Node.js built-ins (Buffer, process, etc.) for algosdk in browser
@@ -23,10 +23,6 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
-  },
-  build: {
-    outDir: '../dist',
-    emptyOutDir: true,
   },
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
