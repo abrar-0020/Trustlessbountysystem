@@ -20,6 +20,20 @@ import { Link, useParams } from "react-router";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 
+function getErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+  try {
+    // FastAPI often returns { detail: "..." } — handle if err is an object
+    const obj = err as any;
+    if (obj?.detail) return String(obj.detail);
+    if (obj?.message) return String(obj.message);
+    return JSON.stringify(err);
+  } catch {
+    return "An unexpected error occurred";
+  }
+}
+
 export function BountyDetails() {
   const { id } = useParams();
   const [bountyDetails, setBountyDetails] = useState<any>(null);
@@ -59,16 +73,28 @@ export function BountyDetails() {
                 worker_address: null
             })
         });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.detail || "Submission failed");
+        let data: any;
+        try {
+          data = await response.json();
+        } catch {
+          throw new Error(`Server error (${response.status}): ${response.statusText}`);
+        }
+        if (!response.ok) {
+          const detail = data?.detail;
+          throw new Error(
+            typeof detail === "string" ? detail :
+            detail != null ? JSON.stringify(detail) :
+            "Submission failed"
+          );
+        }
         
         toast.success("Work submitted successfully!", {
           id: "submit-work",
           description: `TXID: ${(data.txid || data.tx_id || "").substring(0, 10)}...`,
         });
         setBountyDetails(data.bounty);
-    } catch (err: any) {
-        toast.error("Transaction Failed", { id: "submit-work", description: err.message });
+    } catch (err: unknown) {
+        toast.error("Transaction Failed", { id: "submit-work", description: getErrorMessage(err) });
     } finally {
         setSubmitting(false);
         setIpfsHash("");
@@ -83,16 +109,28 @@ export function BountyDetails() {
         const response = await fetch(`http://127.0.0.1:8000/bounties/${id}/validate`, {
             method: "POST"
         });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.detail || "Validation failed");
+        let data: any;
+        try {
+          data = await response.json();
+        } catch {
+          throw new Error(`Server error (${response.status}): ${response.statusText}`);
+        }
+        if (!response.ok) {
+          const detail = data?.detail;
+          throw new Error(
+            typeof detail === "string" ? detail :
+            detail != null ? JSON.stringify(detail) :
+            "Validation failed"
+          );
+        }
         
         toast.success("Bounty Validated!", {
           id: "validate-work",
           description: `Funds Released. TXID: ${(data.txid || data.tx_id || "").substring(0, 10)}...`,
         });
         setBountyDetails(data.bounty);
-    } catch (err: any) {
-        toast.error("Validation Failed", { id: "validate-work", description: err.message });
+    } catch (err: unknown) {
+        toast.error("Validation Failed", { id: "validate-work", description: getErrorMessage(err) });
     } finally {
         setValidating(false);
     }

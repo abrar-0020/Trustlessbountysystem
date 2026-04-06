@@ -2,12 +2,24 @@ import base64
 import time
 import os
 import json
+from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from algosdk.v2client import algod
 from algosdk import account, mnemonic, transaction
 from algosdk.logic import get_application_address
+
+def extract_error(e: Exception) -> str:
+    """Extract a human-readable message from any exception, including Algorand SDK errors."""
+    # AlgodHTTPError stores the response body as e.args[0] which may be a dict or string
+    args = getattr(e, "args", [])
+    if args:
+        first = args[0]
+        if isinstance(first, dict):
+            return first.get("message") or first.get("msg") or str(first)
+        return str(first)
+    return str(e)
 
 app = FastAPI(title="Trustless Bounty Escrow API")
 
@@ -92,7 +104,7 @@ class BountyRequest(BaseModel):
 
 class ProofSubmission(BaseModel):
     ipfs_hash: str
-    worker_address: str = None  
+    worker_address: Optional[str] = None
 
 def wait_for_confirmation(client, txid):
     last_round = client.status().get('last-round')
@@ -154,7 +166,7 @@ def create_bounty(bounty: BountyRequest):
         confirmed_txn = wait_for_confirmation(client, tx_id)
         app_id = confirmed_txn["application-index"]
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Tx failed (Account Funded?): {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Tx failed (Account Funded?): {extract_error(e)}")
 
     try:
         escrow_address = get_application_address(app_id)
@@ -257,7 +269,7 @@ def submit_proof(bounty_id: int, proof: ProofSubmission):
         tx_id = client.send_transaction(signed)
         wait_for_confirmation(client, tx_id)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=extract_error(e))
         
     bounties_db[bounty_idx]["status"] = "in_progress"
     bounties_db[bounty_idx]["proof"] = proof.ipfs_hash
@@ -301,7 +313,7 @@ def validate_bounty(bounty_id: int):
         tx_id = client.send_transaction(signed)
         wait_for_confirmation(client, tx_id)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=extract_error(e))
         
     bounties_db[bounty_idx]["status"] = "completed"
     save_bounties(bounties_db)
@@ -330,7 +342,7 @@ def dispute_bounty(bounty_id: int):
         tx_id = client.send_transaction(signed)
         wait_for_confirmation(client, tx_id)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=extract_error(e))
         
     bounty["status"] = "disputed"
     return {"message": "Bounty disputed", "tx_id": tx_id, "bounty": bounty}
