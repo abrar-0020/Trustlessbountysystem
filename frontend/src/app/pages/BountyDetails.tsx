@@ -39,7 +39,7 @@ function getErrorMessage(err: unknown): string {
 
 export function BountyDetails() {
   const { id } = useParams();
-  const { address, isConnected, connectWallet, peraWallet } = useWallet();
+  const { address, userAddress, isConnected, connectWallet, peraWallet } = useWallet();
   const [bountyDetails, setBountyDetails] = useState<any>(null);
   const [workLink, setWorkLink] = useState("");
   const [outputResult, setOutputResult] = useState("");
@@ -125,7 +125,7 @@ export function BountyDetails() {
         const response = await fetch(`${API_BASE_URL}/bounties/${id}/validate`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ tx_id: txId })
+            body: JSON.stringify({ tx_id: txId, user_address: userAddress })
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data?.detail || "Validation failed");
@@ -156,7 +156,7 @@ export function BountyDetails() {
         const response = await fetch(`${API_BASE_URL}/bounties/${id}/dispute`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ tx_id: txId })
+            body: JSON.stringify({ tx_id: txId, user_address: userAddress })
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data?.detail || "Dispute failed");
@@ -175,8 +175,10 @@ export function BountyDetails() {
   if (loading) return <div className="p-8 text-center text-[#4B4B4B]">Loading smart contract data...</div>;
   if (!bountyDetails) return <div className="p-8 text-center text-[#EF4444]">Bounty not found</div>;
 
-  const isCreator = isConnected && address && bountyDetails.creator_address &&
-    address.toLowerCase() === bountyDetails.creator_address.toLowerCase();
+  console.log("User:", userAddress);
+  console.log("Creator:", bountyDetails?.creator_address);
+
+  const isCreator = userAddress === bountyDetails.creator_address;
   const isWorker = isConnected && address && bountyDetails.worker &&
     address.toLowerCase() === bountyDetails.worker.toLowerCase();
 
@@ -283,7 +285,7 @@ export function BountyDetails() {
             </div>
           </Card>
 
-          {bountyDetails.status !== 'completed' && (
+          {bountyDetails.status !== 'completed' && !isCreator && (
             <Card>
                 <h3 className="text-[#1F1F1F] mb-4">Submit Work</h3>
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -335,14 +337,28 @@ export function BountyDetails() {
                     Submit Proof via Smart Contract
                 </Button>
                 </form>
+            </Card>
+          )}
 
-                {bountyDetails.status === 'in_progress' && (
-                    <div className="mt-6 pt-6 border-t border-[#E5E5E5]">
-                        <h4 className="text-sm text-[#1F1F1F] font-medium mb-3">
-                           {bountyDetails.validation_type === 'auto' ? 'Execute On-Chain Validation' : 'Creator Actions (Demo)'}
-                        </h4>
-                        <div className="flex gap-3">
-                            {bountyDetails.validation_type === 'auto' ? (
+          {bountyDetails.status === 'in_progress' && isCreator && (
+            <Card>
+                <div>
+                    <h4 className="text-sm text-[#1F1F1F] font-medium mb-3">
+                        {bountyDetails.validation_type === 'auto' ? 'Execute On-Chain Validation' : 'Creator Actions'}
+                    </h4>
+                    <div className="flex gap-3">
+                        {bountyDetails.validation_type === 'auto' ? (
+                            <Button 
+                                variant="primary" 
+                                size="md" 
+                                className="w-full bg-[#10B981] hover:bg-[#059669]"
+                                loading={validating}
+                                onClick={handleValidate}
+                            >
+                                <Check className="w-4 h-4" /> Trigger Auto-Validation
+                            </Button>
+                        ) : (
+                            <>
                                 <Button 
                                     variant="primary" 
                                     size="md" 
@@ -350,33 +366,21 @@ export function BountyDetails() {
                                     loading={validating}
                                     onClick={handleValidate}
                                 >
-                                    <Check className="w-4 h-4" /> Trigger Auto-Validation
+                                    <Check className="w-4 h-4" /> Approve & Release Funds
                                 </Button>
-                            ) : (
-                                <>
-                                    <Button 
-                                        variant="primary" 
-                                        size="md" 
-                                        className="w-full bg-[#10B981] hover:bg-[#059669]"
-                                        loading={validating}
-                                        onClick={handleValidate}
-                                    >
-                                        <Check className="w-4 h-4" /> Approve & Release Funds
-                                    </Button>
-                                    <Button 
-                                        variant="outline" 
-                                        size="md" 
-                                        className="w-full hover:bg-red-50 text-red-600 border-red-200"
-                                        onClick={handleDispute}
-                                        loading={validating}
-                                    >
-                                       Reject Work
-                                    </Button>
-                                </>
-                            )}
-                        </div>
+                                <Button 
+                                    variant="outline" 
+                                    size="md" 
+                                    className="w-full hover:bg-red-50 text-red-600 border-red-200"
+                                    onClick={handleDispute}
+                                    loading={validating}
+                                >
+                                    Reject Work
+                                </Button>
+                            </>
+                        )}
                     </div>
-                )}
+                </div>
             </Card>
           )}
 

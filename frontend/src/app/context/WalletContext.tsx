@@ -9,6 +9,7 @@ interface WalletContextType {
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
   peraWallet: PeraWalletConnect | null;
+  userAddress: string | null;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -66,6 +67,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     <WalletContext.Provider
       value={{
         address,
+        userAddress: address,
         shortAddress,
         isConnected: !!address,
         connectWallet,

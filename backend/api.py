@@ -80,6 +80,7 @@ class ProofSubmission(BaseModel):
 class ActionRequest(BaseModel):
     tx_id: str
     resolution: Optional[str] = None  # for resolve_dispute ("approve" or "reject")
+    user_address: str
 
 
 def wait_for_confirmation(client, txid):
@@ -187,6 +188,9 @@ def validate_bounty(bounty_id: int, payload: ActionRequest):
          raise HTTPException(status_code=404)
     
     # Tx already broadcast from frontend
+    if payload.user_address != bounties_db[bounty_idx].get("creator_address"):
+        raise HTTPException(status_code=403, detail="Unauthorized")
+        
     bounties_db[bounty_idx]["status"] = "completed"
     save_bounties(bounties_db)
     return {"status": "success", "message": "Bounty validated and funds released", "txid": payload.tx_id, "bounty": bounties_db[bounty_idx]}
@@ -198,6 +202,9 @@ def dispute_bounty(bounty_id: int, payload: ActionRequest):
          raise HTTPException(status_code=404)
     
     # Tx already broadcast from frontend
+    if payload.user_address != bounties_db[bounty_idx].get("creator_address"):
+        raise HTTPException(status_code=403, detail="Unauthorized")
+        
     bounties_db[bounty_idx]["status"] = "disputed"
     save_bounties(bounties_db)
     return {"message": "Bounty disputed", "tx_id": payload.tx_id, "bounty": bounties_db[bounty_idx]}
@@ -209,6 +216,9 @@ def resolve_dispute(bounty_id: int, payload: ActionRequest):
          raise HTTPException(status_code=404)
          
     # Tx already broadcast from frontend
+    if payload.user_address != bounties_db[bounty_idx].get("creator_address"):
+        raise HTTPException(status_code=403, detail="Unauthorized")
+        
     if payload.resolution == "approve":
         bounties_db[bounty_idx]["status"] = "completed"
     elif payload.resolution == "reject":
