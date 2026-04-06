@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "postinstall": "npm --prefix frontend install",
+    "build": "npm --prefix frontend run build"
+  },
   "dependencies": {
     "gsap": "^3.14.2"
   }
