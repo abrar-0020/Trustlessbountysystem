@@ -1,0 +1,7 @@
+pyteal==0.26.1
+fastapi
+uvicorn[standard]
+pydantic
+py-algorand-sdk
+python-multipart
+# Fallback for Render root deployment
