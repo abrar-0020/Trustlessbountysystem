@@ -42,19 +42,19 @@ ALGOD_ADDRESS = "https://testnet-api.algonode.cloud"
 ALGOD_TOKEN = ""
 client = algod.AlgodClient(ALGOD_TOKEN, ALGOD_ADDRESS)
 
-DB_FILE = "bounties.json"
+DB_PATH = os.getenv("DB_PATH", "bounties.json")
 
 def load_bounties():
-    if os.path.exists(DB_FILE):
+    if os.path.exists(DB_PATH):
         try:
-            with open(DB_FILE, "r") as f:
+            with open(DB_PATH, "r") as f:
                 return json.load(f)
         except:
             return []
     return []
 
 def save_bounties(db_list):
-    with open(DB_FILE, "w") as f:
+    with open(DB_PATH, "w") as f:
         json.dump(db_list, f, indent=2)
 
 bounties_db = load_bounties()

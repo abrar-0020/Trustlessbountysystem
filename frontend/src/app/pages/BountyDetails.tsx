@@ -21,6 +21,7 @@ import { motion } from "motion/react";
 import { toast } from "sonner";
 import { useWallet } from "../context/WalletContext";
 import { submitProofOnChain, validateOnChain, disputeOnChain } from "../utils/algorand";
+import { API_BASE_URL } from "../utils/config";
 
 function getErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
@@ -47,7 +48,7 @@ export function BountyDetails() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`http://127.0.0.1:8000/bounties/${id}`)
+    fetch(`${API_BASE_URL}/bounties/${id}`)
       .then(res => res.json())
       .then(data => {
         setBountyDetails(data);
@@ -56,7 +57,7 @@ export function BountyDetails() {
       .catch(err => {
         console.error(err);
         setLoading(false);
-      })
+      });
   }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -83,7 +84,7 @@ export function BountyDetails() {
         const txId = await submitProofOnChain(peraWallet, address, bountyDetails.app_id, workLink.trim());
 
         // 2. Tell backend to update metadata (no signed bytes needed)
-        const response = await fetch(`http://127.0.0.1:8000/bounties/${id}/submit_proof`, {
+        const response = await fetch(`${API_BASE_URL}/bounties/${id}/submit_proof`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -121,7 +122,7 @@ export function BountyDetails() {
         // 1. Sign + broadcast directly from the browser
         const txId = await validateOnChain(peraWallet, address, workerAddr, bountyDetails.app_id);
         // 2. Tell backend
-        const response = await fetch(`http://127.0.0.1:8000/bounties/${id}/validate`, {
+        const response = await fetch(`${API_BASE_URL}/bounties/${id}/validate`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ tx_id: txId })
@@ -152,7 +153,7 @@ export function BountyDetails() {
         // 1. Sign + broadcast directly from the browser
         const txId = await disputeOnChain(peraWallet, address, bountyDetails.app_id);
         // 2. Tell backend
-        const response = await fetch(`http://127.0.0.1:8000/bounties/${id}/dispute`, {
+        const response = await fetch(`${API_BASE_URL}/bounties/${id}/dispute`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ tx_id: txId })

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_BASE_URL } from "../utils/config";
 import { Card } from "../components/Card";
 import { Badge } from "../components/Badge";
 import { Clock, Search, ArrowRight, ListFilter, Layers } from "lucide-react";
@@ -35,7 +36,7 @@ export function BountyListings() {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/bounties")
+    fetch(`${API_BASE_URL}/bounties`)
       .then(res => res.json())
       .then(data => {
          // data is the array itself or {bounties: []}

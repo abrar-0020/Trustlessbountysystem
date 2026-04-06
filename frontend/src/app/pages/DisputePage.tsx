@@ -18,6 +18,7 @@ import { motion } from "motion/react";
 import { toast } from "sonner";
 import { useWallet } from "../context/WalletContext";
 import { resolveDisputeOnChain } from "../utils/algorand";
+import { API_BASE_URL } from "../utils/config";
 
 export function DisputePage() {
   const { id } = useParams();
@@ -27,7 +28,7 @@ export function DisputePage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-     fetch(`http://127.0.0.1:8000/bounties/${id}`)
+      fetch(`${API_BASE_URL}/bounties/${id}`)
         .then(res => res.json())
         .then(data => setBountyData(data))
         .catch(err => console.error(err));
@@ -61,7 +62,7 @@ export function DisputePage() {
         // 1. Sign + broadcast directly from the browser
         const txId = await resolveDisputeOnChain(peraWallet, address, workerAddr, bountyData.app_id, type);
         // 2. Tell backend to update metadata
-        const response = await fetch(`http://127.0.0.1:8000/bounties/${id}/resolve_dispute`, {
+        const response = await fetch(`${API_BASE_URL}/bounties/${id}/resolve_dispute`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ resolution: type, tx_id: txId })

@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import { useWallet } from "../context/WalletContext";
 import { createAndFundBounty } from "../utils/algorand";
+import { API_BASE_URL } from "../utils/config";
 
 const STEPS = [
   { id: 1, label: "Details", description: "Title & description" },
@@ -96,7 +97,7 @@ export function CreateBounty() {
 
       // Tell backend to store metadata only (tx already confirmed on-chain)
       toast.loading("Saving bounty metadata...", { id: "create-bounty" });
-      const response = await fetch("http://127.0.0.1:8000/bounties/create", {
+      const response = await fetch(`${API_BASE_URL}/bounties/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

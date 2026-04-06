@@ -8,6 +8,7 @@ import { Link } from "react-router";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import { useWallet } from "../context/WalletContext";
+import { API_BASE_URL } from "../utils/config";
 
 import { useState, useEffect } from "react";
 
@@ -44,13 +45,13 @@ export function Dashboard() {
 
   useEffect(() => {
      if (isConnected && address) {
-       fetch(`http://127.0.0.1:8000/wallet/${address}`)
+       fetch(`${API_BASE_URL}/wallet/${address}`)
           .then(res => res.json())
           .then(data => setAlgoBalance(data.balance?.toFixed(2) || "0.00"))
           .catch(err => console.error("Balance fetch error:", err));
      }
 
-     fetch("http://127.0.0.1:8000/bounties")
+       fetch(`${API_BASE_URL}/bounties`)
       .then(res => res.json())
       .then(data => {
          const list = data.bounties || data || [];

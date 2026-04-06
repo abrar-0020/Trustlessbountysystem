@@ -1,4 +1,6 @@
 pyteal==0.26.1
 fastapi
-uvicorn
+uvicorn[standard]
 pydantic
+py-algorand-sdk
+python-multipart
