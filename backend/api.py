@@ -154,15 +154,15 @@ def get_bounties():
     return bounties_db
 
 @app.get("/bounties/{bounty_id}")
-def get_bounty(bounty_id: int):
+def get_bounty(bounty_id: str):
     for b in bounties_db:
-        if b["id"] == bounty_id:
+        if str(b.get("id")) == str(bounty_id):
             return b
     raise HTTPException(status_code=404, detail="Not found")
 
 @app.post("/bounties/{bounty_id}/submit_proof")
-def submit_proof(bounty_id: int, payload: ProofSubmission):
-    bounty_idx = next((i for i, b in enumerate(bounties_db) if b["id"] == bounty_id), None)
+def submit_proof(bounty_id: str, payload: ProofSubmission):
+    bounty_idx = next((i for i, b in enumerate(bounties_db) if str(b.get("id")) == str(bounty_id)), None)
     if bounty_idx is None:
         raise HTTPException(status_code=404)
         
@@ -182,8 +182,8 @@ def submit_proof(bounty_id: int, payload: ProofSubmission):
     return {"status": "success", "message": "Proof recorded", "txid": payload.tx_id, "bounty": bounties_db[bounty_idx]}
 
 @app.post("/bounties/{bounty_id}/validate")
-def validate_bounty(bounty_id: int, payload: ActionRequest):
-    bounty_idx = next((i for i, b in enumerate(bounties_db) if b["id"] == bounty_id), None)
+def validate_bounty(bounty_id: str, payload: ActionRequest):
+    bounty_idx = next((i for i, b in enumerate(bounties_db) if str(b.get("id")) == str(bounty_id)), None)
     if bounty_idx is None:
          raise HTTPException(status_code=404)
     
@@ -196,8 +196,8 @@ def validate_bounty(bounty_id: int, payload: ActionRequest):
     return {"status": "success", "message": "Bounty validated and funds released", "txid": payload.tx_id, "bounty": bounties_db[bounty_idx]}
 
 @app.post("/bounties/{bounty_id}/dispute")
-def dispute_bounty(bounty_id: int, payload: ActionRequest):
-    bounty_idx = next((i for i, b in enumerate(bounties_db) if b["id"] == bounty_id), None)
+def dispute_bounty(bounty_id: str, payload: ActionRequest):
+    bounty_idx = next((i for i, b in enumerate(bounties_db) if str(b.get("id")) == str(bounty_id)), None)
     if bounty_idx is None:
          raise HTTPException(status_code=404)
     
@@ -210,8 +210,8 @@ def dispute_bounty(bounty_id: int, payload: ActionRequest):
     return {"message": "Bounty disputed", "tx_id": payload.tx_id, "bounty": bounties_db[bounty_idx]}
 
 @app.post("/bounties/{bounty_id}/resolve_dispute")
-def resolve_dispute(bounty_id: int, payload: ActionRequest):
-    bounty_idx = next((i for i, b in enumerate(bounties_db) if b["id"] == bounty_id), None)
+def resolve_dispute(bounty_id: str, payload: ActionRequest):
+    bounty_idx = next((i for i, b in enumerate(bounties_db) if str(b.get("id")) == str(bounty_id)), None)
     if bounty_idx is None:
          raise HTTPException(status_code=404)
          

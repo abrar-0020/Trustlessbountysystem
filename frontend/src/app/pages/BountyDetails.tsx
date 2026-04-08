@@ -210,7 +210,7 @@ export function BountyDetails() {
             } 
             size="md"
           >
-            {bountyDetails.status.toUpperCase()}
+            {(bountyDetails.status || 'open').toUpperCase()}
           </Badge>
         </div>
         <div className="flex flex-wrap items-center gap-4 text-xs text-[#CFCFCF]">
@@ -342,7 +342,37 @@ export function BountyDetails() {
 
           {bountyDetails.status === 'in_progress' && isCreator && (
             <Card>
-                <div>
+                {bountyDetails.submission_link && (
+                    <div className="mb-6">
+                        <h3 className="text-[#1F1F1F] mb-4">Worker Submission</h3>
+                        <div className="bg-[#F5F5F5] rounded-xl p-4 border border-[#E5E5E5] space-y-3">
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-[#4B4B4B]">Worker</span>
+                                <span className="text-sm font-mono text-[#1F1F1F]" title={bountyDetails.worker}>
+                                  {bountyDetails.worker ? `${bountyDetails.worker.substring(0, 8)}...${bountyDetails.worker.substring(bountyDetails.worker.length - 8)}` : 'Unknown'}
+                                </span>
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-[#4B4B4B]">Submission Link</span>
+                                <a href={bountyDetails.submission_link} target="_blank" rel="noopener noreferrer" className="text-sm text-[#2563EB] hover:underline flex items-center gap-1 font-medium">
+                                    View Submitted Work <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                            </div>
+
+                            {bountyDetails.submission_output && (
+                                <div className="pt-3 border-t border-[#E5E5E5]">
+                                    <span className="text-sm text-[#4B4B4B] block mb-2">Submitted Output</span>
+                                    <div className="bg-white p-3 rounded-lg border border-[#E5E5E5] text-sm font-mono text-[#1F1F1F] break-all">
+                                        {bountyDetails.submission_output}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                <div className={bountyDetails.submission_link ? "pt-6 border-t border-[#E5E5E5]" : ""}>
                     <h4 className="text-sm text-[#1F1F1F] font-medium mb-3">
                         {bountyDetails.validation_type === 'auto' ? 'Execute On-Chain Validation' : 'Creator Actions'}
                     </h4>

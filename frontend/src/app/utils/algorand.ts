@@ -14,7 +14,10 @@ function b64ToUint8Array(b64: string): Uint8Array {
 }
 
 async function broadcast(signedTxn: Uint8Array): Promise<string> {
-    const resp = await algodClient.sendRawTransaction(signedTxn).do();
+    if (!signedTxn) throw new Error("Transaction signature missing (possibly cancelled in wallet)");
+    // Defensive typecast for polyfilled Uint8Array environments (solves 'Argument must be byte array' error)
+    const rawTxnBytes = signedTxn instanceof Uint8Array ? signedTxn : new Uint8Array(signedTxn);
+    const resp = await algodClient.sendRawTransaction(rawTxnBytes).do();
     const txId: string = (resp as any).txId ?? (resp as any).txid ?? "";
     await algosdk.waitForConfirmation(algodClient, txId, 8);
     return txId;
