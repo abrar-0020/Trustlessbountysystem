@@ -9,6 +9,9 @@ import {
   ShieldCheck,
   Banknote,
   ChevronRight,
+  Smartphone,
+  ExternalLink,
+  CheckCircle,
 } from "lucide-react";
 import { Link } from "react-router";
 import { Button } from "../components/Button";
@@ -49,6 +52,33 @@ const stats = [
   { value: "840", label: "Bounties completed" },
   { value: "99.1%", label: "Success rate" },
   { value: "~3s", label: "Avg settlement" },
+];
+
+const onboardingSteps = [
+  {
+    step: "01",
+    title: "Connect Wallet",
+    description: "Scan the QR code from the Pera Wallet mobile app to securely link your Algorand account.",
+    icon: Smartphone,
+  },
+  {
+    step: "02",
+    title: "Launch & Browse",
+    description: "Click 'Launch App' to enter the dashboard. Browse active bounties or start your own Web3 project.",
+    icon: ExternalLink,
+  },
+  {
+    step: "03",
+    title: "Create & Lock Funds",
+    description: "Example: Post 'Build a React Component'. The 15 ALGO reward is instantly locked in a smart contract.",
+    icon: Lock,
+  },
+  {
+    step: "04",
+    title: "Approve & Payout",
+    description: "A worker submits a GitHub PR. You approve it, and the smart contract instantly releases the funds.",
+    icon: CheckCircle,
+  },
 ];
 
 export function LandingPage() {
@@ -195,6 +225,38 @@ export function LandingPage() {
               </div>
               <h3 className="text-[#1F1F1F] mb-2">{feature.title}</h3>
               <p className="text-sm text-[#4B4B4B] leading-relaxed">{feature.description}</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* Quick Start Walkthrough */}
+      <section className="max-w-6xl mx-auto px-6 py-16 bg-white border-y border-[#E5E5E5] mt-8 mb-8">
+        <p className="text-sm text-[#CFCFCF] mb-4 text-center tracking-widest uppercase">
+          Quick Start Guide
+        </p>
+        <h2 className="text-[#1F1F1F] text-center mb-12" style={{ fontSize: "32px", fontWeight: 600 }}>
+          From zero to automated payout
+        </h2>
+        <div className="grid md:grid-cols-4 gap-6">
+          {onboardingSteps.map((step, i) => (
+            <motion.div
+              key={step.step}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ delay: i * 0.15, duration: 0.5 }}
+              className="relative flex flex-col items-center text-center group"
+            >
+              <div className="w-16 h-16 bg-[#F5F5F5] border-2 border-[#E5E5E5] rounded-full flex items-center justify-center mb-6 group-hover:border-[#10B981] group-hover:text-[#10B981] transition-colors duration-300">
+                <step.icon className="w-7 h-7 text-[#4B4B4B] group-hover:text-[#10B981] transition-colors" />
+              </div>
+              <div className="absolute top-8 left-1/2 w-full h-0.5 bg-gradient-to-r from-[#E5E5E5] to-transparent hidden md:block -z-10" />
+              <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#1F1F1F] text-white text-xs font-bold mb-4 shadow-md">
+                {step.step}
+              </div>
+              <h3 className="text-[#1F1F1F] text-lg font-semibold mb-3">{step.title}</h3>
+              <p className="text-[#4B4B4B] text-sm leading-relaxed">{step.description}</p>
             </motion.div>
           ))}
         </div>
