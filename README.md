@@ -1,5 +1,7 @@
 # DEOXYS: Trustless Bounty Escrow System
 
+**Live Application:** [deoxys.in](https://deoxys.in)
+
 A decentralized platform for creating, managing, and fulfilling bounties using Algorand Smart Contracts. DEOXYS ensures that funds are securely locked in escrow and only released when proof of work is validated by the creator.
 
 ## Core Value Proposition
