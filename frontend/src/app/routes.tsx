@@ -20,6 +20,7 @@ export const router = createBrowserRouter([
       { path: "create", Component: CreateBounty },
       { path: "bounties", Component: BountyListings },
       { path: "bounties/:id", Component: BountyDetails },
+      { path: "disputes", Component: DisputePage },
       { path: "disputes/:id", Component: DisputePage },
     ],
   },

@@ -17,7 +17,7 @@ const navigation = [
   { name: "Create Bounty", href: "/app/create", icon: Plus },
   { name: "My Bounties", href: "/app/bounties", icon: List },
   { name: "Submissions", href: "/app/bounties", icon: FileText },
-  { name: "Disputes", href: "/app/bounties?filter=Disputed", icon: AlertCircle },
+  { name: "Disputes", href: "/app/disputes", icon: AlertCircle },
 ];
 
 const bottomNav = [
