@@ -20,7 +20,7 @@ import { Link, useParams } from "react-router";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import { useWallet } from "../context/WalletContext";
-import { submitProofOnChain, validateOnChain, disputeOnChain } from "../utils/algorand";
+import { submitProofOnChain, validateOnChain } from "../utils/algorand";
 import { API_BASE_URL } from "../utils/config";
 
 function getErrorMessage(err: unknown): string {
@@ -141,36 +141,7 @@ export function BountyDetails() {
     }
   };
 
-  const handleDispute = async () => {
-    if (!isConnected || !address || !peraWallet) {
-      toast.error("Connect your Pera Wallet to raise a dispute"); connectWallet(); return;
-    }
-    if (!window.confirm("Reject this work? This will raise an official dispute on-chain.")) return;
-    
-    setValidating(true);
-    toast.loading("Open Pera Wallet to sign the dispute...", { id: "dispute-work" });
-    try {
-        // 1. Sign + broadcast directly from the browser
-        const txId = await disputeOnChain(peraWallet, address, bountyDetails.app_id);
-        // 2. Tell backend
-        const response = await fetch(`${API_BASE_URL}/bounties/${id}/dispute`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ tx_id: txId, user_address: userAddress })
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data?.detail || "Dispute failed");
-        toast.warning("Bounty Disputed!", {
-          id: "dispute-work",
-          description: `Status updated on-chain. TXID: ${txId.substring(0, 10)}...`,
-        });
-        setBountyDetails(data.bounty);
-    } catch (err: unknown) {
-        toast.error("Dispute Failed", { id: "dispute-work", description: getErrorMessage(err) });
-    } finally {
-        setValidating(false);
-    }
-  };
+
 
   if (loading) return <div className="p-8 text-center text-[#4B4B4B]">Loading smart contract data...</div>;
   if (!bountyDetails) return <div className="p-8 text-center text-[#EF4444]">Bounty not found</div>;
@@ -398,17 +369,13 @@ export function BountyDetails() {
                                 >
                                     <Check className="w-4 h-4" /> Approve & Release Funds
                                 </Button>
-                                <Button 
-                                    variant="outline" 
-                                    size="md" 
-                                    className="w-full hover:bg-red-50 text-red-600 border-red-200"
-                                    onClick={handleDispute}
-                                    loading={validating}
-                                >
-                                    Reject Work
-                                </Button>
                             </>
                         )}
+                    </div>
+
+                    <div className="mt-4 flex items-center gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-lg">
+                        <span className="text-xs text-amber-600 font-medium">⚙️ Dispute Resolution</span>
+                        <span className="text-xs text-amber-500">— Under development. Coming soon.</span>
                     </div>
                 </div>
             </Card>
