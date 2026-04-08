@@ -47,12 +47,7 @@ const flowSteps = [
   { icon: Banknote, label: "Payment Released", sub: "ALGO sent instantly" },
 ];
 
-const stats = [
-  { value: "1.2M+", label: "ALGO in escrow" },
-  { value: "840", label: "Bounties completed" },
-  { value: "99.1%", label: "Success rate" },
-  { value: "~3s", label: "Avg settlement" },
-];
+
 
 const onboardingSteps = [
   {
@@ -146,28 +141,7 @@ export function LandingPage() {
           </div>
         </motion.div>
 
-        {/* Stats strip */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4"
-        >
-          {stats.map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-white border border-[#E5E5E5] rounded-2xl px-6 py-5 text-center shadow-[0_1px_4px_rgba(0,0,0,0.04)]"
-            >
-              <p
-                className="text-[#1F1F1F] mb-1"
-                style={{ fontSize: "24px", fontWeight: 600, lineHeight: 1 }}
-              >
-                {stat.value}
-              </p>
-              <p className="text-sm text-[#CFCFCF]">{stat.label}</p>
-            </div>
-          ))}
-        </motion.div>
+
       </section>
 
       {/* Process Flow */}
