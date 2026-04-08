@@ -1,6 +1,6 @@
-// import { Link } from "react-router";
-// import { ArrowLeft, Construction } from "lucide-react";
-// import { motion } from "motion/react";
+ import { Link } from "react-router";
+ import { ArrowLeft, Construction } from "lucide-react";
+ import { motion } from "motion/react";
 
 // export function DisputePage() {
 //   return (
@@ -25,14 +25,14 @@
 //           Community-governed dispute resolution is coming soon.
 //         </p>
 
-       <div className="px-4 py-2 bg-amber-50 border border-amber-200 rounded-full text-xs text-amber-600 font-medium mb-8">
-         Dispute Resolution
-         This feature is currently under development.
-         Community-governed dispute resolution is coming soon.
-         Coming Soon
-         ← Back to Bounties
+      // <div className="px-4 py-2 bg-amber-50 border border-amber-200 rounded-full text-xs text-amber-600 font-medium mb-8">
+       //  Dispute Resolution
+        // This feature is currently under development.
+        // Community-governed dispute resolution is coming soon.
+      //   Coming Soon
+       //  ← Back to Bounties
 
-       </div>
+      // </div>
 
 //         <Link
 //           to="/app/bounties"
@@ -46,5 +46,13 @@
 //   );
 // }
 
+ export function DisputePage() {
+       <div className="px-4 py-2 bg-amber-50 border border-amber-200 rounded-full text-xs text-amber-600 font-medium mb-8">
+         Dispute Resolution
+         This feature is currently under development.
+         Community-governed dispute resolution is coming soon.
+         Coming Soon
+         ← Back to Bounties
 
-
+       </div>
+ }
