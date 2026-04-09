@@ -1,7 +1,7 @@
 import algosdk from "algosdk";
 import { PeraWalletConnect } from "@perawallet/connect";
+import { ALGOD_SERVER, API_BASE_URL } from "./config";
 
-const ALGOD_SERVER = "https://testnet-api.algonode.cloud";
 export const algodClient = new algosdk.Algodv2("", ALGOD_SERVER, "");
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
@@ -24,7 +24,7 @@ async function broadcast(signedTxn: Uint8Array): Promise<string> {
 }
 
 export async function fetchTealPrograms() {
-    const res = await fetch("http://127.0.0.1:8000/teal");
+    const res = await fetch(`${API_BASE_URL}/teal`);
     if (!res.ok) throw new Error("Failed to fetch TEAL from backend");
     const data = await res.json();
     return {

@@ -3,6 +3,7 @@ import { Button } from "./Button";
 import { Link } from "react-router";
 import { useState, useEffect } from "react";
 import { useWallet } from "../context/WalletContext";
+import { API_BASE_URL, ALGO_EXPLORER_URL } from "../utils/config";
 
 interface NavbarProps {
   showWallet?: boolean;
@@ -17,7 +18,7 @@ export function Navbar({ showWallet = false }: NavbarProps) {
 
   useEffect(() => {
     if (isConnected && address) {
-        fetch(`http://127.0.0.1:8000/wallet/${address}`)
+        fetch(`${API_BASE_URL}/wallet/${address}`)
         .then(res => res.json())
         .then(data => {
             setBalance(data.balance.toFixed(2));
@@ -94,7 +95,7 @@ export function Navbar({ showWallet = false }: NavbarProps) {
                       {copied ? "Copied!" : "Copy address"}
                     </button>
                     <a
-                      href={address ? `https://testnet.algoexplorer.io/address/${address}` : "#"}
+                      href={address ? `${ALGO_EXPLORER_URL}/address/${address}` : "#"}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex w-full items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-[#4B4B4B] hover:bg-[#F5F5F5] transition-colors"
