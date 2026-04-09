@@ -236,7 +236,7 @@ def get_wallet_info(address: str):
         algo_balance = account_info.get("amount", 0) / 1_000_000.0
     except Exception as e:
         print(f"Failed to fetch account info for {address}: {e}")
-        algo_balance = 0.0
+        raise HTTPException(status_code=503, detail=f"Algorand node unreachable: {str(e)}")
 
     return {
         "address": address,
