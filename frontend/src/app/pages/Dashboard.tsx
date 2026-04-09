@@ -21,9 +21,10 @@ const statusConfig = {
 
 export function Dashboard() {
   const { address, shortAddress, isConnected, connectWallet } = useWallet();
-  const [algoBalance, setAlgoBalance] = useState("0.00");
+  const [algoBalance, setAlgoBalance] = useState<string | null>(null);
   const [activeBounty, setActiveBounty] = useState<any>(null);
   const [recentBounties, setRecentBounties] = useState<any[]>([]);
+  const [isApiError, setIsApiError] = useState(false);
   const [stats, setStats] = useState<any[]>([
       {
         label: "Total Bounties",
@@ -46,13 +47,26 @@ export function Dashboard() {
   useEffect(() => {
      if (isConnected && address) {
        fetch(`${API_BASE_URL}/wallet/${address}`)
-          .then(res => res.json())
-          .then(data => setAlgoBalance(data.balance?.toFixed(2) || "0.00"))
-          .catch(err => console.error("Balance fetch error:", err));
+          .then(res => {
+            if (!res.ok) throw new Error("API respond with error");
+            return res.json();
+          })
+          .then(data => {
+            setAlgoBalance(data.balance?.toFixed(2) || "0.00");
+            setIsApiError(false);
+          })
+          .catch(err => {
+            console.error("Balance fetch error:", err);
+            setIsApiError(true);
+            setAlgoBalance("0.00");
+          });
      }
 
        fetch(`${API_BASE_URL}/bounties`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error("Bounties fetch failed");
+        return res.json();
+      })
       .then(data => {
          const list = data.bounties || data || [];
          setRecentBounties(list.slice(-4).reverse());
@@ -78,6 +92,13 @@ export function Dashboard() {
                 suffix: "ALGO",
             }
          ]);
+      })
+      .catch(err => {
+          console.error("Bounties fetch error:", err);
+          setIsApiError(true);
+          toast.error("Backend Connection Failed", {
+            description: `Make sure your API at ${API_BASE_URL} is running.`,
+          });
       });
   }, [isConnected, address]);
   return (
@@ -234,9 +255,11 @@ export function Dashboard() {
               className="text-[#1F1F1F] mb-1"
               style={{ fontSize: "28px", fontWeight: 600, lineHeight: 1.2 }}
             >
-              {isConnected ? algoBalance : "—"}
+              {isConnected ? (algoBalance || "...") : "—"}
             </p>
-            <p className="text-xs text-[#CFCFCF] mb-4">{isConnected ? "Available ALGO" : "Wallet not connected"}</p>
+            <p className="text-xs text-[#CFCFCF] mb-4">
+              {isConnected ? (isApiError ? "⚠️ Connection Error" : "Available ALGO") : "Wallet not connected"}
+            </p>
             {isConnected ? (
               <button
                 onClick={() =>

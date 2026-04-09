@@ -24,3 +24,7 @@ export const ALGO_EXPLORER_URL = NETWORK === "mainnet"
 
 console.log(`[Trustless Bounty] Using API: ${API_BASE_URL} (${isProd ? "Production" : "Development"})`);
 console.log(`[Trustless Bounty] Network: ${NETWORK} | Node: ${ALGOD_SERVER}`);
+
+if (isProd && API_BASE_URL.includes("127.0.0.1")) {
+  console.warn("⚠️ [Trustless Bounty] API_BASE_URL is pointing to localhost in production! Please set VITE_API_BASE_URL in Vercel.");
+}

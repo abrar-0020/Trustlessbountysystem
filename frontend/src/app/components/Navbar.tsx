@@ -19,10 +19,16 @@ export function Navbar({ showWallet = false }: NavbarProps) {
   useEffect(() => {
     if (isConnected && address) {
         fetch(`${API_BASE_URL}/wallet/${address}`)
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) throw new Error("API Offline");
+            return res.json();
+        })
         .then(data => {
             setBalance(data.balance.toFixed(2));
-        }).catch(err => console.error("Wallet fetch error:", err));
+        }).catch(err => {
+            console.error("Wallet fetch error:", err);
+            setBalance("Offline");
+        });
     }
   }, [isConnected, address]);
 
