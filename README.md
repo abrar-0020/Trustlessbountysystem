@@ -5,7 +5,7 @@ A decentralized platform for creating, managing, and fulfilling bounties using A
 
 ## Core Value Proposition
 
-DEOXYS eliminates the need for trust between bounty creators and workers. Unlike traditional platforms where a worker must trust the creator to pay after work is done, DEOXYS locks the reward in a dedicated smart contract address at the moment of creation. The contract logic guarantees that funds can only be released to the worker's address upon successful validation or returned to the creator if conditions are not met.
+It eliminates the need for trust between bounty creators and workers. Unlike traditional platforms where a worker must trust the creator to pay after work is done, it locks the reward in a dedicated smart contract address at the moment of creation. The contract logic guarantees that funds can only be released to the worker's address upon successful validation or returned to the creator if conditions are not met.
 
 ## Key Features
 
