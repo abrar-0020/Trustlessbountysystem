@@ -83,12 +83,17 @@ class ActionRequest(BaseModel):
     user_address: str
 
 
-def wait_for_confirmation(client, txid):
-    last_round = client.status().get('last-round')
+def wait_for_confirmation(client, txid, timeout_rounds=100):
+    start_round = client.status().get('last-round')
+    deadline_round = start_round + timeout_rounds
     txinfo = client.pending_transaction_info(txid)
+
     while not (txinfo.get('confirmed-round') and txinfo.get('confirmed-round') > 0):
+        if client.status().get('last-round') >= deadline_round:
+            raise TimeoutError(f"Transaction {txid} was not confirmed within {timeout_rounds} rounds.")
         time.sleep(1)
         txinfo = client.pending_transaction_info(txid)
+
     return txinfo
 
 def compile_program(source_code):
