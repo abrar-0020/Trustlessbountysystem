@@ -1,88 +1,63 @@
-#Trustless Bounty Escrow System
+# Trustless Bounty Escrow System
+
+A bounty platform built on Algorand where the money is locked in a smart contract from the moment a bounty is created — not held by a middleman, not released on someone's word.
+
+## Why this exists
+
+Most bounty/freelance platforms ask you to trust that the person posting the work will actually pay once it's done. This flips that. When a bounty is created, the reward is sent straight into a dedicated Algorand smart contract. From that point on, no one — including the creator — can just walk away with the funds. The contract only releases the payout to the worker once the creator approves the submission, or refunds the creator if the bounty falls through.
+
+## How it works
+
+1. **Create** — a creator posts a bounty, and the backend deploys a fresh Algorand smart contract for it, locking in the reward plus a small buffer for fees.
+2. **Submit** — a worker picks up the bounty and submits proof of work (an IPFS hash, a link, whatever fits). The bounty's on-chain state moves to "Submitted."
+3. **Validate** — the creator checks the submission. If it's approved, the contract fires an inner transaction and pays the worker directly.
+4. **Complete** — the bounty closes out, on-chain and in the local metadata store.
+
+## Stack
+
+**Frontend** — React 18 + Vite, Tailwind for styling, Pera Wallet Connect for wallet auth, Framer Motion for the small animations, Lucide for icons.
+
+**Backend** — FastAPI, the Algorand Python SDK for building transactions, Uvicorn to serve it, and a simple JSON store for metadata that doesn't need to live on-chain.
+
+**Contracts** — written in PyTeal, compiled down to TEAL for the AVM.
+
+## A couple of design details worth knowing
+
+- Every bounty gets its own contract, not a shared pool — keeps the logic and the funds isolated per bounty.
+- Each contract holds a small buffer (0.1 ALGO) to cover its own minimum balance and fees, so payouts don't fail on dust.
+- A flat 0.5 ALGO platform fee is taken at creation time.
+
+## Project layout
+frontend/ React app — components, pages, styling
+backend/ FastAPI server + contract deployment logic
+backend/bounty_escrow.py PyTeal source for the escrow contract
+backend/bounty_approval.teal Compiled approval program
 
 
-A decentralized platform for creating, managing, and fulfilling bounties using Algorand Smart Contracts. It ensures that funds are securely locked in escrow and only released when proof of work is validated by the creator.
-
-## Core Value Proposition
-
-It eliminates the need for trust between bounty creators and workers. Unlike traditional platforms where a worker must trust the creator to pay after work is done, it locks the reward in a dedicated smart contract address at the moment of creation. The contract logic guarantees that funds can only be released to the worker's address upon successful validation or returned to the creator if conditions are not met.
-
-## Key Features
-
-- **Decentralized Escrow**: Every bounty is its own Algorand Application (Smart Contract).
-- **Automated State Management**: Bounties move through clear states: Open, In Progress, Submitted, and Completed.
-- **Secure Payouts**: Funds are released via Inner Transactions directly from the Smart Contract to the worker.
-- **Security Deposit**: Includes a small buffer (0.1 ALGO) in every contract to cover transaction fees and minimum balance requirements.
-- **Platform Integrity**: A small platform fee (0.5 ALGO) is collected during bounty creation to support the ecosystem.
-- **Hybrid Architecture**: Combines the speed of a FastAPI backend with the security of the Algorand blockchain.
-
-## Technology Stack
-
-### Frontend
-- **React 18**: Current generation UI library.
-- **Vite**: Ultra-fast build tool and dev server.
-- **Tailwind CSS**: Utility-first styling for a premium, responsive design.
-- **Pera Wallet Connect**: Secure integration for Algorand wallet users.
-- **Framer Motion**: Smooth micro-animations and transitions.
-- **Lucide Icons**: Clean, consistent iconography.
+## Running it locally
 
 ### Backend
-- **FastAPI**: Modern, high-performance Python web framework.
-- **Algorand Python SDK**: For blockchain interaction and transaction construction.
-- **Uvicorn**: Lightning-fast ASGI server.
-- **Local Persistence**: JSON-based storage for off-chain metadata synchronization.
 
-### Smart Contracts
-- **PyTeal**: High-level Python language for writing Algorand Smart Contracts.
-- **TEAL**: The compiled bytecode executed by the Algorand Virtual Machine (AVM).
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate      # Windows: .\venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn api:app --reload
+```
 
-## Project Structure
+The backend signs some administrative transactions with a demo wallet. Its address gets printed to the console on startup — fund it from the [Algorand TestNet Dispenser](https://bank.testnet.algorand.network/) before doing anything that needs it.
 
-- `frontend/`: React application source code, components, and styling.
-- `backend/`: FastAPI server, smart contract logic, and deployment scripts.
-- `backend/bounty_escrow.py`: The PyTeal source code for the escrow logic.
-- `backend/bounty_approval.teal`: Compiled approval program.
+### Frontend
 
-## Setup and Installation
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-### Backend Setup
+App runs at `http://localhost:5173`.
 
-1. Navigate to the `backend` directory.
-2. Create and activate a virtual environment:
-   ```bash
-   python -m venv venv
-   .\venv\Scripts\activate  # Windows
-   source venv/bin/activate  # macOS/Linux
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Start the server:
-   ```bash
-   uvicorn api.py:app --reload
-   ```
-5. Fund the Backend Wallet:
-   The backend uses a demo wallet for signing certain administrative transactions. The address will be printed in the console on startup. Fund this address using the [Algorand TestNet Dispenser](https://bank.testnet.algorand.network/).
+---
 
-### Frontend Setup
-
-1. Navigate to the `frontend` directory.
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
-4. Access the application at `http://localhost:5173`.
-
-## Workflow
-
-1. **Create**: A creator initiates a bounty. The system deploys a new Smart Contract and locks the reward amount plus fees.
-2. **Submit**: A worker selects a bounty and submits proof of work (e.g., an IPFS hash or URL). The contract state updates to reflect the submission.
-3. **Validate**: The creator reviews the submission. Upon approval, the Smart Contract executes an Inner Transaction to send the Algos to the worker.
-4. **Complete**: The bounty is marked as completed on-chain and in the local metadata.
-
-Build for the Algorand Blockchain Ecosystem.
+Built for the Algorand ecosystem.
